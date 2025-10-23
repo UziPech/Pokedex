@@ -24,6 +24,8 @@ class PokemonCardBloc extends Bloc<PokemonCardEvent, PokemonCardState> {
       _onCardsFetched,
       transformer: throttleDroppable(_throttleDuration),
     );
+    on<CardsRefreshed>(_onCardsRefreshed);
+    // TODO: Handle CardsSearched and FilterChanged.
   }
 
   final PokemonCardRepository _pokemonCardRepository;
@@ -60,7 +62,29 @@ class PokemonCardBloc extends Bloc<PokemonCardEvent, PokemonCardState> {
           ),
         );
       }
-    } catch (_) {
+    } on Exception catch (_) {
+      emit(state.copyWith(status: PokemonCardStatus.failure));
+    }
+  }
+
+  Future<void> _onCardsRefreshed(
+    CardsRefreshed event,
+    Emitter<PokemonCardState> emit,
+  ) async {
+    // Reset pagination and fetch first page
+    _currentPage = 1;
+    try {
+      emit(state.copyWith(status: PokemonCardStatus.initial));
+      final cards = await _pokemonCardRepository.getCards(page: _currentPage);
+      _currentPage++;
+      emit(
+        state.copyWith(
+          status: PokemonCardStatus.success,
+          cards: cards,
+          hasReachedMax: false,
+        ),
+      );
+    } on Exception catch (_) {
       emit(state.copyWith(status: PokemonCardStatus.failure));
     }
   }

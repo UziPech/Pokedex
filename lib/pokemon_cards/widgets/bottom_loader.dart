@@ -7,7 +7,7 @@ class BottomLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16),
         child: SizedBox(
           height: 24,
           width: 24,

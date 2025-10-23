@@ -28,21 +28,47 @@ class _CardsViewState extends State<CardsView> {
         builder: (context, state) {
           switch (state.status) {
             case PokemonCardStatus.failure:
-              return const Center(child: Text('Fallo al obtener las cartas'));
+              return RefreshIndicator(
+                onRefresh: _onRefresh,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height - kToolbarHeight,
+                    child: const Center(
+                      child: Text('Fallo al obtener las cartas'),
+                    ),
+                  ),
+                ),
+              );
             case PokemonCardStatus.success:
               if (state.cards.isEmpty) {
-                return const Center(child: Text('No se encontraron cartas'));
+                return RefreshIndicator(
+                  onRefresh: _onRefresh,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height:
+                          MediaQuery.of(context).size.height - kToolbarHeight,
+                      child: const Center(
+                        child: Text('No se encontraron cartas'),
+                      ),
+                    ),
+                  ),
+                );
               }
-              return ListView.builder(
-                controller: _scrollController,
-                itemCount: state.hasReachedMax
-                    ? state.cards.length
-                    : state.cards.length + 1,
-                itemBuilder: (BuildContext context, int index) {
-                  return index >= state.cards.length
-                      ? const BottomLoader()
-                      : CardListItem(card: state.cards[index]);
-                },
+              return RefreshIndicator(
+                onRefresh: _onRefresh,
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: state.hasReachedMax
+                      ? state.cards.length
+                      : state.cards.length + 1,
+                  itemBuilder: (BuildContext context, int index) {
+                    return index >= state.cards.length
+                        ? const BottomLoader()
+                        : CardListItem(card: state.cards[index]);
+                  },
+                ),
               );
             case PokemonCardStatus.initial:
               return const Center(child: CircularProgressIndicator());
@@ -52,11 +78,21 @@ class _CardsViewState extends State<CardsView> {
     );
   }
 
+  Future<void> _onRefresh() async {
+    final bloc = context.read<PokemonCardBloc>();
+    bloc.add(CardsRefreshed());
+    // Wait until bloc emits either success or failure after refresh
+    await bloc.stream.firstWhere(
+      (s) =>
+          s.status == PokemonCardStatus.success ||
+          s.status == PokemonCardStatus.failure,
+    );
+  }
+
   @override
   void dispose() {
-    _scrollController
-      ..removeListener(_onScroll)
-      ..dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
