@@ -11,7 +11,11 @@ class PokemonCardRepositoryImpl implements PokemonCardRepository {
   static const _maxPages = 3;
 
   @override
-  Future<List<PokemonCard>> getCards({required int page}) async {
+  Future<List<PokemonCard>> getCards({
+    required int page,
+    String? query,
+    Set<String>? filters,
+  }) async {
     // Simulate network latency
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
