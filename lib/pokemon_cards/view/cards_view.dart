@@ -1,6 +1,8 @@
 // ignore_for_file: cascade_invocations  // Reason: duplicate-receiver suggestions are
 // low-value here due to repeated UI scaffolding; will refactor if actionable.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pokecard_dex/pokemon_cards/bloc/pokemon_card_bloc.dart';
@@ -17,6 +19,7 @@ class CardsView extends StatefulWidget {
 class _CardsViewState extends State<CardsView> {
   final _scrollController = ScrollController();
   final _scaffoldKey = GlobalKey<ScaffoldState>();
+  // Debouncer placeholder kept for future shared config.
 
   @override
   void initState() {
@@ -60,8 +63,33 @@ class _CardsViewState extends State<CardsView> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: SizedBox(
                     height: bodyHeight,
-                    child: const Center(
-                      child: Text('Fallo al obtener las cartas'),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.wifi_off,
+                            size: 64,
+                            color: Colors.red[300],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error al cargar las cartas',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  color: Colors.red[700],
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Desliza hacia abajo para intentar de nuevo',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -134,6 +162,8 @@ class _CardsViewState extends State<CardsView> {
 }
 
 class _CardSearchDelegate extends SearchDelegate<void> {
+  Timer? _debounce;
+  int get _debounceMs => 300;
   @override
   List<Widget>? buildActions(BuildContext context) {
     return [
@@ -164,7 +194,20 @@ class _CardSearchDelegate extends SearchDelegate<void> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    // Debounce search as the user types.
+    _debounce?.cancel();
+    if (query.isNotEmpty) {
+      _debounce = Timer(Duration(milliseconds: _debounceMs), () {
+        context.read<PokemonCardBloc>().add(CardsSearched(query));
+      });
+    }
     return const SizedBox.shrink();
+  }
+
+  @override
+  void close(BuildContext context, void result) {
+    _debounce?.cancel();
+    super.close(context, result);
   }
 }
 
