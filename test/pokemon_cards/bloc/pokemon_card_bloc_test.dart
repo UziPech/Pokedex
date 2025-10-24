@@ -40,7 +40,6 @@ void main() {
         PokemonCardState(
           status: PokemonCardStatus.success,
           cards: [sampleCard],
-          hasReachedMax: false,
         ),
       ],
     );
@@ -55,15 +54,10 @@ void main() {
       },
       act: (bloc) => bloc.add(CardsRefreshed()),
       expect: () => const <PokemonCardState>[
-        PokemonCardState(
-          status: PokemonCardStatus.initial,
-          cards: [],
-          hasReachedMax: false,
-        ),
+        PokemonCardState(),
         PokemonCardState(
           status: PokemonCardStatus.success,
           cards: [sampleCard],
-          hasReachedMax: false,
         ),
       ],
     );
@@ -76,10 +70,56 @@ void main() {
       },
       act: (bloc) => bloc.add(CardsFetched()),
       expect: () => const <PokemonCardState>[
+        PokemonCardState(status: PokemonCardStatus.failure),
+      ],
+    );
+
+    blocTest<PokemonCardBloc, PokemonCardState>(
+      'emits [initial(query), success] when searching',
+      build: () {
+        when(
+          () => repository.getCards(page: 1, query: 'bulba', filters: null),
+        ).thenAnswer((_) async => const [sampleCard]);
+        return PokemonCardBloc(pokemonCardRepository: repository);
+      },
+      act: (bloc) => bloc.add(const CardsSearched('bulba')),
+      expect: () => const <PokemonCardState>[
         PokemonCardState(
-          status: PokemonCardStatus.failure,
+          status: PokemonCardStatus.initial,
           cards: [],
-          hasReachedMax: false,
+          query: 'bulba',
+          filters: {},
+        ),
+        PokemonCardState(
+          status: PokemonCardStatus.success,
+          cards: [sampleCard],
+          query: 'bulba',
+          filters: {},
+        ),
+      ],
+    );
+
+    blocTest<PokemonCardBloc, PokemonCardState>(
+      'emits [initial(filters), success] when filters change',
+      build: () {
+        when(
+          () => repository.getCards(page: 1, query: null, filters: {'Pokémon'}),
+        ).thenAnswer((_) async => const [sampleCard]);
+        return PokemonCardBloc(pokemonCardRepository: repository);
+      },
+      act: (bloc) => bloc.add(const FilterChanged({'Pokémon'})),
+      expect: () => const <PokemonCardState>[
+        PokemonCardState(
+          status: PokemonCardStatus.initial,
+          cards: [],
+          query: '',
+          filters: {'Pokémon'},
+        ),
+        PokemonCardState(
+          status: PokemonCardStatus.success,
+          cards: [sampleCard],
+          query: '',
+          filters: {'Pokémon'},
         ),
       ],
     );

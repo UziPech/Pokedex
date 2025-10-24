@@ -24,21 +24,25 @@ class PokemonCardRepositoryApi implements PokemonCardRepository {
     if (query != null && query.isNotEmpty) {
       queryParameters['q'] = 'name:$query*';
     }
-    // Note: the API supports filter expressions; for now we join types as a simple example.
+    // The API supports filter expressions. For now we build a simple
+    // comma-separated supertype expression when filters are present.
     if (filters != null && filters.isNotEmpty) {
-      queryParameters['q'] =
-          (queryParameters['q'] ?? '') + ' supertype:${filters.join(',')}';
+      final existingQ = queryParameters['q'] ?? '';
+      queryParameters['q'] = '$existingQ supertype:${filters.join(',')}';
     }
-    final uri = Uri.parse(_baseUrl).replace(queryParameters: queryParameters);
+
+    final uriBase = Uri.parse(_baseUrl);
+    final uri = uriBase.replace(
+      queryParameters: queryParameters,
+    );
     final response = await _client.get(
       uri,
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers: {'Accept': 'application/json'},
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to load cards: ${response.statusCode}');
+    final status = response.statusCode;
+    if (status != 200) {
+      throw Exception('Failed to load cards: $status');
     }
 
     final body = json.decode(response.body) as Map<String, dynamic>;

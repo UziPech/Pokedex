@@ -1,3 +1,6 @@
+// ignore_for_file: cascade_invocations  // Reason: duplicate-receiver suggestions are
+// low-value here due to repeated UI scaffolding; will refactor if actionable.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pokecard_dex/pokemon_cards/bloc/pokemon_card_bloc.dart';
@@ -13,6 +16,7 @@ class CardsView extends StatefulWidget {
 
 class _CardsViewState extends State<CardsView> {
   final _scrollController = ScrollController();
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -22,8 +26,30 @@ class _CardsViewState extends State<CardsView> {
 
   @override
   Widget build(BuildContext context) {
+    final bodyHeight = MediaQuery.of(context).size.height - kToolbarHeight;
     return Scaffold(
-      appBar: AppBar(title: const Text('PokéCard Dex')),
+      key: _scaffoldKey,
+      appBar: AppBar(
+        title: const Text('PokéCard Dex'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              await showSearch<void>(
+                context: context,
+                delegate: _CardSearchDelegate(),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        child: _FilterDrawer(),
+      ),
       body: BlocBuilder<PokemonCardBloc, PokemonCardState>(
         builder: (context, state) {
           switch (state.status) {
@@ -33,7 +59,7 @@ class _CardsViewState extends State<CardsView> {
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: SizedBox(
-                    height: MediaQuery.of(context).size.height - kToolbarHeight,
+                    height: bodyHeight,
                     child: const Center(
                       child: Text('Fallo al obtener las cartas'),
                     ),
@@ -47,8 +73,7 @@ class _CardsViewState extends State<CardsView> {
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: SizedBox(
-                      height:
-                          MediaQuery.of(context).size.height - kToolbarHeight,
+                      height: bodyHeight,
                       child: const Center(
                         child: Text('No se encontraron cartas'),
                       ),
@@ -105,5 +130,105 @@ class _CardsViewState extends State<CardsView> {
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
     return currentScroll >= (maxScroll * 0.9);
+  }
+}
+
+class _CardSearchDelegate extends SearchDelegate<void> {
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    // Dispatch search and close
+    context.read<PokemonCardBloc>().add(CardsSearched(query));
+    close(context, null);
+    return const SizedBox.shrink();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class _FilterDrawer extends StatefulWidget {
+  @override
+  State<_FilterDrawer> createState() => _FilterDrawerState();
+}
+
+class _FilterDrawerState extends State<_FilterDrawer> {
+  static const _options = <String>['Pokémon', 'Trainer', 'Energy'];
+  final Set<String> _selected = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final bloc = context.read<PokemonCardBloc>();
+    _selected.addAll(bloc.state.filters);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          const ListTile(title: Text('Filtros')),
+          Expanded(
+            child: ListView(
+              children: _options.map((o) {
+                return CheckboxListTile(
+                  title: Text(o),
+                  value: _selected.contains(o),
+                  onChanged: (v) {
+                    setState(() {
+                      if (v ?? false) {
+                        _selected.add(o);
+                      } else {
+                        _selected.remove(o);
+                      }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.read<PokemonCardBloc>().add(
+                        FilterChanged(_selected),
+                      );
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Aplicar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

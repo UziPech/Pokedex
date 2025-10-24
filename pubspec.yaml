@@ -9,16 +9,16 @@ environment:
 
 dependencies:
   bloc: ^9.0.1
-  equatable: ^2.0.5
   bloc_concurrency: ^0.3.0
-  stream_transform: ^2.0.0
-  http: ^1.1.0
+  equatable: ^2.0.5
   flutter:
     sdk: flutter
   flutter_bloc: ^9.1.1
   flutter_localizations:
     sdk: flutter
+  http: ^1.1.0
   intl: ^0.20.2
+  stream_transform: ^2.0.0
 
 dev_dependencies:
   bloc_test: ^10.0.0
@@ -26,7 +26,3 @@ dev_dependencies:
     sdk: flutter
   mocktail: ^1.0.4
   very_good_analysis: ^10.0.0
-
-flutter:
-  generate: true
-  uses-material-design: true
